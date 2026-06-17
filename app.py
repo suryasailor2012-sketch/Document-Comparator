@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import os
-import shutil
 import uuid
 from functools import wraps
 from datetime import datetime
@@ -20,7 +19,7 @@ from auth_store import (
     list_users,
     update_user,
 )
-from quotation_compare import compare_files
+from quotation_compare import compare_multiple_files
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -95,13 +94,22 @@ def save_upload(file_storage, destination_dir: Path, fallback_name: str) -> Path
     return destination
 
 
+def save_uploads(file_storages, destination_dir: Path) -> list[Path]:
+    saved_paths = []
+    for index, file_storage in enumerate(file_storages, start=1):
+        if not file_storage or not file_storage.filename:
+            continue
+        saved_paths.append(save_upload(file_storage, destination_dir, f"quote_{index}"))
+    if len(saved_paths) < 2:
+        raise ValueError("Upload at least two quotation documents.")
+    return saved_paths
+
+
 def build_downloads(comparison_id: str) -> dict[str, str]:
     return {
         "csv": f"/comparison/{comparison_id}/download/outputs/differences.csv",
         "json": f"/comparison/{comparison_id}/download/outputs/differences.json",
         "html": f"/comparison/{comparison_id}/download/outputs/report.html",
-        "quote_1": f"/comparison/{comparison_id}/download/uploads/quote_1",
-        "quote_2": f"/comparison/{comparison_id}/download/uploads/quote_2",
     }
 
 
@@ -119,17 +127,10 @@ def compare_route():
     outputs_dir = comparison_dir / "outputs"
 
     try:
-        quote_1 = save_upload(request.files.get("quote_1"), uploads_dir, "quote_1")
-        quote_2 = save_upload(request.files.get("quote_2"), uploads_dir, "quote_2")
-
-        quote_1_alias = uploads_dir / f"quote_1{quote_1.suffix.lower()}"
-        quote_2_alias = uploads_dir / f"quote_2{quote_2.suffix.lower()}"
-        shutil.copy2(quote_1, quote_1_alias)
-        shutil.copy2(quote_2, quote_2_alias)
-
+        quote_paths = save_uploads(request.files.getlist("quotes"), uploads_dir)
         tolerance = float(request.form.get("tolerance") or 0.01)
         name_similarity = float(request.form.get("name_similarity") or 0.72)
-        comparison = compare_files(quote_1, quote_2, outputs_dir, tolerance, name_similarity)
+        comparison = compare_multiple_files(quote_paths, outputs_dir, tolerance, name_similarity)
 
     except Exception as exc:
         shutil.rmtree(comparison_dir, ignore_errors=True)
@@ -138,10 +139,9 @@ def compare_route():
     comparison_id = comparison_dir.name
     result = {
         "comparison_id": comparison_id,
-        "quote_1_name": quote_1.name,
-        "quote_2_name": quote_2.name,
-        "quote_1_count": comparison["quote_1_count"],
-        "quote_2_count": comparison["quote_2_count"],
+        "mode": comparison["mode"],
+        "quote_names": comparison["quote_names"],
+        "quote_counts": comparison["quote_counts"],
         "rows": comparison["rows"],
         "summary": comparison["summary"],
         "downloads": build_downloads(comparison_id),
@@ -160,17 +160,6 @@ def download_file(comparison_id: str, relative_path: str):
     target = (comparison_dir / relative_path).resolve()
     if not str(target).startswith(str(comparison_dir)):
         abort(404)
-
-    if relative_path == "uploads/quote_1":
-        matches = sorted((comparison_dir / "uploads").glob("quote_1.*"))
-        if not matches:
-            abort(404)
-        target = matches[0]
-    elif relative_path == "uploads/quote_2":
-        matches = sorted((comparison_dir / "uploads").glob("quote_2.*"))
-        if not matches:
-            abort(404)
-        target = matches[0]
 
     if not target.exists():
         abort(404)

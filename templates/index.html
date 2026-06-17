@@ -33,13 +33,8 @@
 
           <form class="upload-form" method="post" action="/compare" enctype="multipart/form-data">
             <label class="file-field">
-              <span>Parent document 1</span>
-              <input type="file" name="quote_1" accept=".csv,.xlsx,.xls,.pdf" required>
-            </label>
-
-            <label class="file-field">
-              <span>Parent document 2</span>
-              <input type="file" name="quote_2" accept=".csv,.xlsx,.xls,.pdf" required>
+              <span>Quotation documents</span>
+              <input type="file" name="quotes" accept=".csv,.xlsx,.xls,.pdf" multiple required>
             </label>
 
             <div class="settings">
@@ -85,51 +80,53 @@
                 <span>Name changes</span>
               </div>
               <div>
-                <strong>{{ result.summary.item_only_in_quote_1 + result.summary.item_only_in_quote_2 }}</strong>
+                <strong>{{ result.summary.item_missing }}</strong>
                 <span>Missing items</span>
               </div>
             </div>
 
             <div class="source-strip">
-              <span>{{ result.quote_1_name }}: {{ result.quote_1_count }} items</span>
-              <span>{{ result.quote_2_name }}: {{ result.quote_2_count }} items</span>
+              {% for quote_name in result.quote_names %}
+                <span>{{ quote_name }}: {{ result.quote_counts[loop.index0] }} items</span>
+              {% endfor %}
             </div>
 
             <div class="table-wrap">
-              <table>
+              <table class="multi-table">
                 <thead>
                   <tr>
                     <th>Difference</th>
-                    <th>Document 1 item</th>
-                    <th>Document 1 location</th>
-                    <th>Document 2 item</th>
-                    <th>Document 2 location</th>
-                    <th>Qty</th>
-                    <th>Unit price</th>
-                    <th>Total</th>
+                    <th>Item group</th>
+                    {% for quote_name in result.quote_names %}
+                      <th>{{ quote_name }}</th>
+                    {% endfor %}
                   </tr>
                 </thead>
                 <tbody>
                   {% for row in result.rows %}
                     <tr>
                       <td><span class="tag">{{ row.difference_type }}</span></td>
-                      <td>{{ row.item_quote_1 }}</td>
-                      <td class="location">
-                        {% if row.quote_1_location %}
-                          {{ row.quote_1_location.source_file }}<br>
-                          <strong>{{ row.quote_1_location.label }}</strong>
-                        {% endif %}
-                      </td>
-                      <td>{{ row.item_quote_2 }}</td>
-                      <td class="location">
-                        {% if row.quote_2_location %}
-                          {{ row.quote_2_location.source_file }}<br>
-                          <strong>{{ row.quote_2_location.label }}</strong>
-                        {% endif %}
-                      </td>
-                      <td>{{ row.qty_quote_1 }} / {{ row.qty_quote_2 }}</td>
-                      <td>{{ row.unit_price_quote_1 }} / {{ row.unit_price_quote_2 }}</td>
-                      <td>{{ row.total_quote_1 }} / {{ row.total_quote_2 }}</td>
+                      <td>{{ row.item_group }}</td>
+                      {% for entry in row.entries %}
+                        <td class="{% if not entry.present %}missing-cell{% endif %}">
+                          {% if entry.present %}
+                            <strong>{{ entry.item }}</strong>
+                            <dl class="quote-values">
+                              <div><dt>Qty</dt><dd>{{ entry.qty }}</dd></div>
+                              <div><dt>Unit</dt><dd>{{ entry.unit_price }}</dd></div>
+                              <div><dt>Total</dt><dd>{{ entry.total }}</dd></div>
+                            </dl>
+                            <div class="location">
+                              {% if entry.location %}
+                                {{ entry.location.source_file }}<br>
+                                <strong>{{ entry.location.label }}</strong>
+                              {% endif %}
+                            </div>
+                          {% else %}
+                            <span class="missing-label">Not found</span>
+                          {% endif %}
+                        </td>
+                      {% endfor %}
                     </tr>
                   {% endfor %}
                 </tbody>
@@ -137,8 +134,8 @@
             </div>
           {% else %}
             <div class="empty-state">
-              <h2>Upload two quotations to begin</h2>
-              <p>Supported formats: PDF, Excel, and CSV. Each comparison is saved in its own folder with the source uploads and output reports.</p>
+              <h2>Upload quotations to begin</h2>
+              <p>Select two or more PDF, Excel, or CSV quotations. Each comparison is saved in its own folder with the source uploads and output reports.</p>
             </div>
           {% endif %}
         </div>

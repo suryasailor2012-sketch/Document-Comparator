@@ -1,11 +1,12 @@
 # Quotation Comparator Web App
 
-A Railway-ready Flask application for comparing two quotation documents. It accepts PDF, Excel, and CSV files, stores each comparison in its own folder, and produces CSV and JSON reports with source locations for every difference.
+A Railway-ready Flask application for comparing two or more quotation documents. It accepts PDF, Excel, and CSV files, stores each comparison in its own folder, and produces CSV and JSON reports with source locations for every difference.
 
 ## Features
 
-- Upload two quotation documents from the browser.
+- Upload two or more quotation documents from the browser.
 - Compare item names, quantities, unit prices, and total prices.
+- Show one result column per uploaded quotation.
 - Store each comparison under `comparisons/<comparison-id>/`.
 - Preserve uploaded parent documents under `uploads/`.
 - Save reports under `outputs/`.

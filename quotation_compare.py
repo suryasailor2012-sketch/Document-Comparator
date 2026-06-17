@@ -496,6 +496,111 @@ def location_label(location: object) -> str:
     return str(location.get("label") or "")
 
 
+def format_row_value(row: dict[str, object] | None, key: str) -> str:
+    if row is None:
+        return ""
+    value = row.get(key)
+    return money(value if isinstance(value, float) else None)
+
+
+def similar_to_cluster(row: dict[str, object], cluster: list[dict[str, object]], threshold: float) -> bool:
+    row_key = str(row["key"])
+    return any(SequenceMatcher(None, row_key, str(existing["key"])).ratio() >= threshold for existing in cluster)
+
+
+def cluster_multi_rows(
+    quote_rows: list[tuple[int, str, dict[str, object]]],
+    name_similarity: float,
+) -> list[list[tuple[int, str, dict[str, object]]]]:
+    clusters: list[list[tuple[int, str, dict[str, object]]]] = []
+    for quote_index, quote_name, row in sorted(quote_rows, key=lambda item: str(item[2]["key"])):
+        placed = False
+        for cluster in clusters:
+            if similar_to_cluster(row, [entry[2] for entry in cluster], name_similarity):
+                cluster.append((quote_index, quote_name, row))
+                placed = True
+                break
+        if not placed:
+            clusters.append([(quote_index, quote_name, row)])
+    return clusters
+
+
+def values_differ(values: list[float | None], tolerance: float) -> bool:
+    present_values = [value for value in values if value is not None]
+    if len(present_values) <= 1:
+        return False
+    first = present_values[0]
+    return any(abs(value - first) > tolerance for value in present_values[1:])
+
+
+def compare_many(
+    quotations: list[tuple[str, LoadedQuotation]],
+    tolerance: float = 0.01,
+    name_similarity: float = 0.72,
+) -> list[dict[str, object]]:
+    all_rows: list[tuple[int, str, dict[str, object]]] = []
+    for quote_index, (quote_name, quotation) in enumerate(quotations, start=1):
+        for row in quotation.rows:
+            all_rows.append((quote_index, quote_name, row))
+
+    results: list[dict[str, object]] = []
+    for cluster in cluster_multi_rows(all_rows, name_similarity):
+        by_quote: dict[int, tuple[str, dict[str, object]]] = {}
+        for quote_index, quote_name, row in cluster:
+            by_quote.setdefault(quote_index, (quote_name, row))
+
+        entries = []
+        item_names = set()
+        qty_values: list[float | None] = []
+        unit_values: list[float | None] = []
+        total_values: list[float | None] = []
+
+        for quote_index, (quote_name, _quotation) in enumerate(quotations, start=1):
+            matched = by_quote.get(quote_index)
+            row = matched[1] if matched else None
+            if row:
+                item_names.add(str(row["item"]).strip().lower())
+                qty_values.append(row.get("qty") if isinstance(row.get("qty"), float) else None)
+                unit_values.append(row.get("unit_price") if isinstance(row.get("unit_price"), float) else None)
+                total_values.append(row.get("total") if isinstance(row.get("total"), float) else None)
+            entries.append(
+                {
+                    "quote_index": quote_index,
+                    "quote_name": quote_name,
+                    "present": row is not None,
+                    "item": row.get("item") if row else "",
+                    "qty": format_row_value(row, "qty"),
+                    "unit_price": format_row_value(row, "unit_price"),
+                    "total": format_row_value(row, "total"),
+                    "location": row.get("location") if row else None,
+                }
+            )
+
+        difference_types = []
+        if len(by_quote) < len(quotations):
+            difference_types.append("item_missing")
+        if len(item_names) > 1:
+            difference_types.append("item_name_differs")
+        if values_differ(qty_values, tolerance):
+            difference_types.append("qty_differs")
+        if values_differ(unit_values, tolerance):
+            difference_types.append("unit_price_differs")
+        if values_differ(total_values, tolerance):
+            difference_types.append("total_differs")
+
+        if difference_types:
+            preferred_name = next((str(entry["item"]) for entry in entries if entry["item"]), "")
+            results.append(
+                {
+                    "item_group": preferred_name,
+                    "difference_type": "; ".join(difference_types),
+                    "entries": entries,
+                }
+            )
+
+    return results
+
+
 def write_csv_report(rows: list[dict[str, object]], output_path: Path) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     fieldnames = [
@@ -536,6 +641,111 @@ def write_csv_report(rows: list[dict[str, object]], output_path: Path) -> None:
 def write_json_report(rows: list[dict[str, object]], output_path: Path) -> None:
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(json.dumps(rows, indent=2), encoding="utf-8")
+
+
+def write_multi_csv_report(rows: list[dict[str, object]], output_path: Path, quote_names: list[str]) -> None:
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    fieldnames = ["item_group", "difference_type"]
+    for index, quote_name in enumerate(quote_names, start=1):
+        prefix = f"quote_{index}"
+        fieldnames.extend(
+            [
+                f"{prefix}_name",
+                f"{prefix}_item",
+                f"{prefix}_qty",
+                f"{prefix}_unit_price",
+                f"{prefix}_total",
+                f"{prefix}_location",
+            ]
+        )
+
+    with output_path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fieldnames)
+        writer.writeheader()
+        for row in rows:
+            flattened = {
+                "item_group": row.get("item_group", ""),
+                "difference_type": row.get("difference_type", ""),
+            }
+            for entry in row.get("entries", []):
+                prefix = f"quote_{entry['quote_index']}"
+                flattened[f"{prefix}_name"] = entry.get("quote_name", "")
+                flattened[f"{prefix}_item"] = entry.get("item", "")
+                flattened[f"{prefix}_qty"] = entry.get("qty", "")
+                flattened[f"{prefix}_unit_price"] = entry.get("unit_price", "")
+                flattened[f"{prefix}_total"] = entry.get("total", "")
+                flattened[f"{prefix}_location"] = location_label(entry.get("location"))
+            writer.writerow({field: flattened.get(field, "") for field in fieldnames})
+
+
+def write_multi_html_report(
+    rows: list[dict[str, object]],
+    output_path: Path,
+    quote_names: list[str],
+    title: str = "Quotation Differences",
+) -> None:
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    header_cells = "".join(
+        f"<th>{html.escape(name)}<br>Item</th><th>{html.escape(name)}<br>Qty</th>"
+        f"<th>{html.escape(name)}<br>Unit</th><th>{html.escape(name)}<br>Total</th>"
+        f"<th>{html.escape(name)}<br>Location</th>"
+        for name in quote_names
+    )
+    rendered_rows = []
+    for row in rows:
+        entry_cells = []
+        for entry in row.get("entries", []):
+            location = entry.get("location")
+            location_text = ""
+            if isinstance(location, dict):
+                location_text = (
+                    f"{html.escape(str(location.get('source_file', '')))}<br>"
+                    f"<strong>{html.escape(str(location.get('label', '')))}</strong>"
+                )
+            entry_cells.extend(
+                [
+                    f"<td>{html.escape(str(entry.get('item', '')))}</td>",
+                    f"<td>{html.escape(str(entry.get('qty', '')))}</td>",
+                    f"<td>{html.escape(str(entry.get('unit_price', '')))}</td>",
+                    f"<td>{html.escape(str(entry.get('total', '')))}</td>",
+                    f"<td>{location_text}</td>",
+                ]
+            )
+        rendered_rows.append(
+            "<tr>"
+            f"<td>{html.escape(str(row.get('difference_type', '')))}</td>"
+            f"<td>{html.escape(str(row.get('item_group', '')))}</td>"
+            f"{''.join(entry_cells)}"
+            "</tr>"
+        )
+
+    document = f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>{html.escape(title)}</title>
+  <style>
+    body {{ font-family: Arial, Helvetica, sans-serif; margin: 28px; color: #18212f; }}
+    h1 {{ margin: 0 0 16px; }}
+    table {{ border-collapse: collapse; width: 100%; font-size: 12px; }}
+    th, td {{ border: 1px solid #d9e0e8; padding: 8px; text-align: left; vertical-align: top; }}
+    th {{ background: #eef4f8; }}
+    strong {{ color: #111827; }}
+  </style>
+</head>
+<body>
+  <h1>{html.escape(title)}</h1>
+  <p>Total item groups with differences: {len(rows)}</p>
+  <table>
+    <thead>
+      <tr><th>Difference</th><th>Item group</th>{header_cells}</tr>
+    </thead>
+    <tbody>{''.join(rendered_rows)}</tbody>
+  </table>
+</body>
+</html>
+"""
+    output_path.write_text(document, encoding="utf-8")
 
 
 def write_html_report(rows: list[dict[str, object]], output_path: Path, title: str = "Quotation Differences") -> None:
@@ -617,6 +827,7 @@ def summarize(rows: list[dict[str, object]]) -> dict[str, int]:
         "item_name_differs": 0,
         "item_only_in_quote_1": 0,
         "item_only_in_quote_2": 0,
+        "item_missing": 0,
     }
     for row in rows:
         difference_type = str(row.get("difference_type", ""))
@@ -624,6 +835,38 @@ def summarize(rows: list[dict[str, object]]) -> dict[str, int]:
             if key in difference_type:
                 summary[key] += 1
     return summary
+
+
+def compare_multiple_files(
+    quote_paths: list[Path],
+    output_dir: Path,
+    tolerance: float = 0.01,
+    name_similarity: float = 0.72,
+) -> dict[str, object]:
+    if len(quote_paths) < 2:
+        raise ValueError("Upload at least two quotation documents.")
+
+    loaded = [(path.name, load_quotation(path)) for path in quote_paths]
+    rows = compare_many(loaded, tolerance, name_similarity)
+    quote_names = [name for name, _quotation in loaded]
+
+    csv_path = output_dir / "differences.csv"
+    json_path = output_dir / "differences.json"
+    html_path = output_dir / "report.html"
+    write_multi_csv_report(rows, csv_path, quote_names)
+    write_json_report(rows, json_path)
+    write_multi_html_report(rows, html_path, quote_names)
+
+    return {
+        "mode": "multi",
+        "quote_names": quote_names,
+        "quote_counts": [len(quotation.rows) for _name, quotation in loaded],
+        "rows": rows,
+        "summary": summarize(rows),
+        "csv_path": csv_path,
+        "json_path": json_path,
+        "html_path": html_path,
+    }
 
 
 def compare_files(

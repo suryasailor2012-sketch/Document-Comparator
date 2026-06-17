@@ -348,6 +348,10 @@ table {
   font-size: 13px;
 }
 
+.multi-table {
+  min-width: 1180px;
+}
+
 th,
 td {
   border-bottom: 1px solid var(--line);
@@ -383,6 +387,37 @@ th {
 
 .location strong {
   color: var(--ink);
+}
+
+.quote-values {
+  display: grid;
+  gap: 3px;
+  margin: 8px 0;
+}
+
+.quote-values div {
+  display: grid;
+  grid-template-columns: 44px 1fr;
+  gap: 8px;
+}
+
+.quote-values dt,
+.quote-values dd {
+  margin: 0;
+}
+
+.quote-values dt {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.missing-cell {
+  background: #fff7ed;
+}
+
+.missing-label {
+  color: var(--accent);
+  font-weight: 700;
 }
 
 .empty-state {
