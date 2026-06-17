@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Quotation Comparator</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="workspace">
+        <div class="panel upload-panel">
+          <div class="heading">
+            <p class="eyebrow">Quotation Comparator</p>
+            <h1>Compare quotation documents</h1>
+          </div>
+
+          {% if error %}
+            <div class="alert">{{ error }}</div>
+          {% endif %}
+
+          <form class="upload-form" method="post" action="/compare" enctype="multipart/form-data">
+            <label class="file-field">
+              <span>Parent document 1</span>
+              <input type="file" name="quote_1" accept=".csv,.xlsx,.xls,.pdf" required>
+            </label>
+
+            <label class="file-field">
+              <span>Parent document 2</span>
+              <input type="file" name="quote_2" accept=".csv,.xlsx,.xls,.pdf" required>
+            </label>
+
+            <div class="settings">
+              <label>
+                Price tolerance
+                <input type="number" name="tolerance" step="0.01" min="0" value="0.01">
+              </label>
+              <label>
+                Name similarity
+                <input type="number" name="name_similarity" step="0.01" min="0" max="1" value="0.72">
+              </label>
+            </div>
+
+            <button type="submit">Compare documents</button>
+          </form>
+        </div>
+
+        <div class="panel result-panel">
+          {% if result %}
+            <div class="result-header">
+              <div>
+                <p class="eyebrow">Comparison {{ result.comparison_id }}</p>
+                <h2>Differences found</h2>
+              </div>
+              <div class="actions">
+                <a href="{{ result.downloads.html }}">HTML</a>
+                <a href="{{ result.downloads.csv }}">CSV</a>
+                <a href="{{ result.downloads.json }}">JSON</a>
+              </div>
+            </div>
+
+            <div class="summary-grid">
+              <div>
+                <strong>{{ result.summary.total_differences }}</strong>
+                <span>Total differences</span>
+              </div>
+              <div>
+                <strong>{{ result.summary.unit_price_differs }}</strong>
+                <span>Unit price</span>
+              </div>
+              <div>
+                <strong>{{ result.summary.item_name_differs }}</strong>
+                <span>Name changes</span>
+              </div>
+              <div>
+                <strong>{{ result.summary.item_only_in_quote_1 + result.summary.item_only_in_quote_2 }}</strong>
+                <span>Missing items</span>
+              </div>
+            </div>
+
+            <div class="source-strip">
+              <span>{{ result.quote_1_name }}: {{ result.quote_1_count }} items</span>
+              <span>{{ result.quote_2_name }}: {{ result.quote_2_count }} items</span>
+            </div>
+
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Difference</th>
+                    <th>Document 1 item</th>
+                    <th>Document 1 location</th>
+                    <th>Document 2 item</th>
+                    <th>Document 2 location</th>
+                    <th>Qty</th>
+                    <th>Unit price</th>
+                    <th>Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for row in result.rows %}
+                    <tr>
+                      <td><span class="tag">{{ row.difference_type }}</span></td>
+                      <td>{{ row.item_quote_1 }}</td>
+                      <td class="location">
+                        {% if row.quote_1_location %}
+                          {{ row.quote_1_location.source_file }}<br>
+                          <strong>{{ row.quote_1_location.label }}</strong>
+                        {% endif %}
+                      </td>
+                      <td>{{ row.item_quote_2 }}</td>
+                      <td class="location">
+                        {% if row.quote_2_location %}
+                          {{ row.quote_2_location.source_file }}<br>
+                          <strong>{{ row.quote_2_location.label }}</strong>
+                        {% endif %}
+                      </td>
+                      <td>{{ row.qty_quote_1 }} / {{ row.qty_quote_2 }}</td>
+                      <td>{{ row.unit_price_quote_1 }} / {{ row.unit_price_quote_2 }}</td>
+                      <td>{{ row.total_quote_1 }} / {{ row.total_quote_2 }}</td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          {% else %}
+            <div class="empty-state">
+              <h2>Upload two quotations to begin</h2>
+              <p>Supported formats: PDF, Excel, and CSV. Each comparison is saved in its own folder with the source uploads and output reports.</p>
+            </div>
+          {% endif %}
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

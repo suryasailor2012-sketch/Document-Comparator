@@ -1,0 +1,277 @@
+:root {
+  color-scheme: light;
+  --ink: #18212f;
+  --muted: #667085;
+  --line: #d9e0e8;
+  --panel: #ffffff;
+  --wash: #f4f7fa;
+  --brand: #0f766e;
+  --brand-strong: #115e59;
+  --accent: #c2410c;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--wash);
+  color: var(--ink);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.app-shell {
+  min-height: 100vh;
+  padding: 28px;
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: 360px minmax(0, 1fr);
+  gap: 20px;
+  max-width: 1440px;
+  margin: 0 auto;
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.upload-panel {
+  align-self: start;
+  padding: 24px;
+}
+
+.result-panel {
+  min-height: calc(100vh - 56px);
+  padding: 24px;
+  overflow: hidden;
+}
+
+.heading h1,
+.result-header h2,
+.empty-state h2 {
+  margin: 0;
+  letter-spacing: 0;
+}
+
+.heading h1 {
+  font-size: 30px;
+  line-height: 1.1;
+}
+
+.result-header h2,
+.empty-state h2 {
+  font-size: 24px;
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  color: var(--brand-strong);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.upload-form {
+  display: grid;
+  gap: 16px;
+  margin-top: 28px;
+}
+
+.file-field,
+.settings label {
+  display: grid;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+input[type="file"],
+input[type="number"] {
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--ink);
+  font-size: 14px;
+}
+
+input[type="file"] {
+  padding: 12px;
+}
+
+input[type="number"] {
+  height: 42px;
+  padding: 0 10px;
+}
+
+.settings {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+button,
+.actions a {
+  border: 0;
+  border-radius: 6px;
+  background: var(--brand);
+  color: #fff;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+button {
+  height: 46px;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+.actions a {
+  display: inline-flex;
+  align-items: center;
+  height: 36px;
+  padding: 0 14px;
+}
+
+.alert {
+  margin-top: 18px;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  background: #fff1f2;
+  color: #9f1239;
+  padding: 12px;
+  font-size: 14px;
+}
+
+.result-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 24px 0 14px;
+}
+
+.summary-grid div {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 14px;
+}
+
+.summary-grid strong {
+  display: block;
+  font-size: 24px;
+}
+
+.summary-grid span,
+.source-strip,
+.empty-state p {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.source-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.source-strip span {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 8px 10px;
+}
+
+.table-wrap {
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  max-height: calc(100vh - 250px);
+}
+
+table {
+  width: 100%;
+  min-width: 1050px;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+th,
+td {
+  border-bottom: 1px solid var(--line);
+  padding: 10px;
+  text-align: left;
+  vertical-align: top;
+}
+
+th {
+  position: sticky;
+  top: 0;
+  background: #eef4f8;
+  color: #344054;
+  font-size: 12px;
+  z-index: 1;
+}
+
+.tag {
+  display: inline-block;
+  border-radius: 999px;
+  background: #fff7ed;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 5px 8px;
+  white-space: nowrap;
+}
+
+.location {
+  color: var(--muted);
+  min-width: 145px;
+}
+
+.location strong {
+  color: var(--ink);
+}
+
+.empty-state {
+  display: grid;
+  align-content: center;
+  min-height: calc(100vh - 120px);
+  max-width: 520px;
+}
+
+@media (max-width: 900px) {
+  .app-shell {
+    padding: 14px;
+  }
+
+  .workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .result-panel {
+    min-height: 420px;
+  }
+
+  .summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
