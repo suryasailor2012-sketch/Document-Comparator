@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Users - Quotation Comparator</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/">Quotation Comparator</a>
+      <nav>
+        <a href="{{ url_for('admin_users') }}">Users</a>
+        <a href="{{ url_for('change_password_route') }}">Password</a>
+        <form method="post" action="{{ url_for('logout') }}">
+          <button class="link-button" type="submit">Logout</button>
+        </form>
+      </nav>
+    </header>
+
+    <main class="app-shell narrow-shell">
+      <section class="panel management-panel">
+        <div class="heading">
+          <p class="eyebrow">Administration</p>
+          <h1>User access</h1>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% for category, text in messages %}
+            <div class="alert {{ category }}">{{ text }}</div>
+          {% endfor %}
+        {% endwith %}
+        {% if error %}
+          <div class="alert">{{ error }}</div>
+        {% endif %}
+        {% if message %}
+          <div class="alert message">{{ message }}</div>
+        {% endif %}
+
+        <form class="admin-create stack-form" method="post">
+          <div class="form-grid">
+            <label>
+              Username
+              <input type="text" name="username" required>
+            </label>
+            <label>
+              Temporary password
+              <input type="password" name="password" minlength="8" required>
+            </label>
+          </div>
+          <div class="check-row">
+            <label><input type="checkbox" name="is_admin"> Admin</label>
+            <label><input type="checkbox" name="is_active" checked> Active</label>
+          </div>
+          <button type="submit">Add user</button>
+        </form>
+
+        <div class="user-list">
+          {% for user in users %}
+            <form class="user-row" method="post" action="{{ url_for('admin_update_user', user_id=user.id) }}">
+              <input type="text" name="username" value="{{ user.username }}" required>
+              <input type="password" name="new_password" minlength="8" placeholder="New password">
+              <label><input type="checkbox" name="is_admin" {% if user.is_admin %}checked{% endif %}> Admin</label>
+              <label><input type="checkbox" name="is_active" {% if user.is_active %}checked{% endif %}> Active</label>
+              <button type="submit">Update</button>
+            </form>
+          {% endfor %}
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

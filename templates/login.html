@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Login - Quotation Comparator</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+  </head>
+  <body>
+    <main class="auth-shell">
+      <section class="panel auth-panel">
+        <p class="eyebrow">Quotation Comparator</p>
+        <h1>Sign in</h1>
+
+        {% if error %}
+          <div class="alert">{{ error }}</div>
+        {% endif %}
+
+        <form class="stack-form" method="post">
+          <label>
+            Username
+            <input type="text" name="username" autocomplete="username" required>
+          </label>
+          <label>
+            Password
+            <input type="password" name="password" autocomplete="current-password" required>
+          </label>
+          <button type="submit">Sign in</button>
+        </form>
+      </section>
+    </main>
+  </body>
+</html>

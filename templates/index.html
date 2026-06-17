@@ -7,6 +7,18 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
   </head>
   <body>
+    <header class="topbar">
+      <a class="brand" href="/">Quotation Comparator</a>
+      <nav>
+        {% if current_user and current_user.is_admin %}
+          <a href="{{ url_for('admin_users') }}">Users</a>
+        {% endif %}
+        <a href="{{ url_for('change_password_route') }}">Password</a>
+        <form method="post" action="{{ url_for('logout') }}">
+          <button class="link-button" type="submit">Logout</button>
+        </form>
+      </nav>
+    </header>
     <main class="app-shell">
       <section class="workspace">
         <div class="panel upload-panel">

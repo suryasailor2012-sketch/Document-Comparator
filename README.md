@@ -13,6 +13,25 @@ A Railway-ready Flask application for comparing two quotation documents. It acce
 - Show document locations for differences:
   - PDF: page, table, row, and bounding box metadata in JSON.
   - Excel/CSV: row number.
+- Login required for all comparison and download pages.
+- Admin page for adding and updating users.
+- User password-change page.
+
+## Default Admin
+
+On first startup the app creates one admin account.
+
+- Username: `admin`
+- Password: `admin123`
+
+For production, set these Railway environment variables before the first deploy:
+
+- `ADMIN_USERNAME`
+- `ADMIN_PASSWORD`
+- `SECRET_KEY`
+- `DATA_DIR`
+
+Use a Railway volume for `DATA_DIR` if you want users and comparison folders to persist across redeploys.
 
 ## Local Run
 
